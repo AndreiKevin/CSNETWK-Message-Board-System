@@ -7,6 +7,8 @@ class Client:
         self.serverAddressPort = (address, port)
         self.bufferSize = bufferSize
         self.UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+        self.UDPClientSocket.bind((socket.gethostbyname(socket.gethostname()), 20002))
+        
 
     def join(self, s):
         self.serverAddressPort = (s[1], s[2])
@@ -54,7 +56,7 @@ class Client:
             ["/leave", "Disconnect to the server application"],
             ["/register <handle>", "Register a unique handle or alias"],
             ["/all <message>", "Send message to all"],
-            ["/msg <handle> <message>", "Send direct message to a single handle "],
+            ["/msg <handle> <message>", "Send direct message to a single handle"],
             ["/?", "Request command help to output all Input Syntax commands for references"]
         ]
         header = ["Command", "Description"]
