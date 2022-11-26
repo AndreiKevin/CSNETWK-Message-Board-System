@@ -1,12 +1,15 @@
 import socket
+import json
 
 class Server:
     def __init__(self, address=socket.gethostbyname(socket.gethostname()), port=20001, bufferSize=1024):
+        # self.clients is of type dict{string(handle) : tuple(address, port)}
+        self.clients = {}
         self.bufferSize = bufferSize
         self.address = address
         self.port = port
         self.UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
-        # Bind to address and ip
+        # Set up address and ip for UDP server. It is automatic for client.
         self.UDPServerSocket.bind((self.address, self.port))
 
     def bind(self, address, port):
@@ -17,23 +20,42 @@ class Server:
     def recieve(self):
         return self.UDPServerSocket.recvfrom(self.bufferSize)
 
-    def join(self, address):
-        self.msgOne("pong", address)
+    # This function finds the address based on the handle/alias name
+    def findHandle(self, handle):
+        if handle in self.clients:
+            return self.clients[handle]
+        else:
+            return False
 
-    def leave(self):
-        pass
+    def join(self, clientAddress):
+        self.send({"command":"msg", "handle":"Server", "message":"Welcome"}, clientAddress)
 
-    def register(self):
-        pass
+    def leave(self, clientAddress):
+        self.send({"command":"msg", "handle":"Server", "message":"Goodbye"}, clientAddress)
 
-    def msgAll(self):
-        pass
+    def register(self, name, clientAddress):
+        if name in self.clients:
+            self.send({"command":"error", "message":"Error: Registration failed. Handle or alias already exists."})
+        else:
+            self.clients['name'] = clientAddress
 
-    def msgOne(self, msg:str, address):
-        # make json
-        msgjson = 
-        bytesToSend = str.encode(msgjson.)
+    def msgAll(self, msg):
+        for address in self.clients.values():
+            self.send(msg, address)
+
+    def msgOne(self, msg:str, clientAddress:tuple):
+        # find address of handler in dictionary
+        address = self.findHandle(msg["handle"])
+        
+        if address:
+            self.send(msg, address)
+        else:
+            self.send({"command":"error", "message":"Error: Handle or alias not found."}, clientAddress)
+
+    def send(self, msg:str, address:tuple):
+        bytesToSend = str.encode(json.dumps(msg))
         self.UDPServerSocket.sendto(bytesToSend, address)
+        
 
 def main():
     server = Server()
@@ -45,24 +67,25 @@ def main():
         byteAddress = bytesAddressPair[1]
 
         # decode
-        clientMsg = str.decode(byteMsg)
+        clientMsgJson = str.decode(byteMsg)
+        clientMsgStr = json.loads(clientMsgJson)
         clientAddress = str.decode(byteAddress)
 
         # Respond
-        match clientMsg["command"]:
+        match clientMsgStr["command"]:
             case "join":
                 server.join(clientAddress)
             case "leave":
-                pass
+                server.leave(clientAddress)
             case "register":
-                pass
+                server.register(clientAddress)
             case "all":
-                pass
+                server.msgAll(clientMsgStr)
             case "msg":
-                pass
+                server.msgOne(clientMsgStr, clientAddress)
             case _:
                 # Return error message
-                server.msgOne("Error: Command parameters do not match or is not allowed.", clientAddress)
+                server.send({"command":"error", "message":"Error: Command parameters do not match or is not allowed."}, clientAddress)
 
 
 main()
