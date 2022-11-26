@@ -3,55 +3,71 @@ import json
 from tabulate import tabulate
 
 class Client:
-    def __init__(self, serverAddress, serverPort, bufferSize=1024):
-        self.serverAddressPort = (serverAddress, serverPort)
+    def __init__(self, address=socket.gethostbyname(socket.gethostname()), port=20001, bufferSize=1024):
+        self.serverAddressPort = (address, port)
         self.bufferSize = bufferSize
         self.UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 
-    def join(self, serverAddress, serverPort):
-        self.serverAddressPort = (serverAddress, serverPort)
+    def join(self, s):
+        self.serverAddressPort = (s[1], s[2])
         
-        msgjson = 
-        bytesToSend = str.encode(msgjson)
         try:
             # Send to server using created UDP socket
-            self.UDPClientSocket.sendto(bytesToSend, self.serverAddressPort)
+            self.send('{"command":"join"}', self.serverAddressPort)
         except:
             print("Error: Connection to the Message Board Server has failed! Please check IP Address and Port Number.")
         
     def leave(self):
-        # if not currently connected raise error
-        if self.serverAddressPort == None:
-            print("Error: Disconnection failed. Please connect to the server first.")
-        else:
+        # if not currently connected print error
+        try:
+            self.send('{"command":"leave"}', self.serverAddressPort)
             self.serverAddressPort = None
+        except:
+            print("Error: Disconnection failed. Please connect to the server first.")
 
-    def register(self):
-        status = 
+    def register(self, s):
+        s[0][0] = ''
+        command = s[0]
+        handle = s[1]
 
-    def msgAll(self, msg):
-        pass
+        self.send('{"command":command, "handle":handle}', self.serverAddressPort)
 
-    def msgOne(self, msg, handle):
-        # server only accepts json
-        msgjson = 
-        bytesToSend = str.encode(msgjson)
-        # Send to server using created UDP socket
-        self.UDPClientSocket.sendto(bytesToSend, self.serverAddressPort)
+    def msgAll(self, s):
+        s[0][0] = ''
+        command = s[0]
+        message = ' '.join(word for word in s[1::])
+
+        self.send('{"command":command, "message":message}', self.serverAddressPort)
+
+    def msgOne(self, s):
+        s[0][0] = ''
+        command = s[0]
+        handle = s[1]
+        message = ' '.join(word for word in s[2::])
+
+        self.send('{"command":command, "handle": handle, "message":message}', self.serverAddressPort)
         
     def question(self):
         # Print all description of commands
         commands = [
-            ["/join <server_ip_add> <port>", "Connect to the server application"]
-            ["/leave", "Disconnect to the server application"]
-            ["/register <handle>", "Register a unique handle or alias"]
-            ["/all <message>", "Send message to all"]
-            ["/msg <handle> <message>", "Send direct message to a single handle "]
+            ["/join <server_ip_add> <port>", "Connect to the server application"],
+            ["/leave", "Disconnect to the server application"],
+            ["/register <handle>", "Register a unique handle or alias"],
+            ["/all <message>", "Send message to all"],
+            ["/msg <handle> <message>", "Send direct message to a single handle "],
             ["/?", "Request command help to output all Input Syntax commands for references"]
         ]
         header = ["Command", "Description"]
         print(tabulate(commands, headers=header))
 
+    def send(self, msg:str, address:tuple):
+        bytesToSend = str.encode(json.dumps(msg))
+        self.UDPClientSocket.sendto(bytesToSend, address)
+
+    def recieve(self):
+        return self.UDPClientSocket.recvfrom(self.bufferSize)
+
+#####################
 
 client = Client()
 
@@ -62,7 +78,7 @@ def parseInput(input):
         if not len(s)==3:
             print("Error: Command parameters do not match or is not allowed.")
         else:
-            client.join()
+            client.join(s)
     elif "/leave" in input:
         if not len(s)==1:
             print("Error: Command parameters do not match or is not allowed.")
@@ -72,17 +88,17 @@ def parseInput(input):
         if not len(s)==2:
             print("Error: Command parameters do not match or is not allowed.")
         else:
-            client.register()
+            client.register(s)
     elif "/all" in input:
         if len(s)<2:
             print("Error: Command parameters do not match or is not allowed.")
         else:
-            client.msgAll()
+            client.msgAll(s)
     elif "/msg" in input:
         if len(s)<3:
             print("Error: Command parameters do not match or is not allowed.")
         else:
-            client.msgOne()
+            client.msgOne(s)
     elif "/question" in input:
         if not len(s)==1:
             print("Error: Command parameters do not match or is not allowed.")
@@ -95,7 +111,14 @@ def main():
     # take input
     while True:
         parseInput(input())
-        msgFromServer = self.UDPClientSocket.recvfrom(self.bufferSize)
-        msg = "Message from Server {}".format(msgFromServer[0])
-        print("Server IP:", msgFromServer[1])
-        print(msg)
+
+        bytesAddressPair = client.recieve()
+        # Convert recieved inputs
+        byteMsg = bytesAddressPair[0]
+        byteAddress = bytesAddressPair[1]
+        ServerMsgStr = str.decode(json.loads(byteMsg))
+
+        print(ServerMsgStr['message'])
+
+
+main()

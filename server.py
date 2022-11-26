@@ -17,9 +17,6 @@ class Server:
         self.port = port
         self.UDPServerSocket.bind((self.address, self.port))
 
-    def recieve(self):
-        return self.UDPServerSocket.recvfrom(self.bufferSize)
-
     # This function finds the address based on the handle/alias name
     def findHandle(self, handle):
         if handle in self.clients:
@@ -28,16 +25,17 @@ class Server:
             return False
 
     def join(self, clientAddress):
-        self.send({"command":"msg", "handle":"Server", "message":"Welcome"}, clientAddress)
+        self.send('{"command":"msg", "handle":"Server", "message":"Connection to the Message Board Server is successful!}', clientAddress)
 
     def leave(self, clientAddress):
-        self.send({"command":"msg", "handle":"Server", "message":"Goodbye"}, clientAddress)
+        self.send('{"command":"msg", "handle":"Server", "message":"Connection closed. Thank you!"}', clientAddress)
 
     def register(self, name, clientAddress):
         if name in self.clients:
-            self.send({"command":"error", "message":"Error: Registration failed. Handle or alias already exists."})
+            self.send('{"command":"error", "message":"Error: Registration failed. Handle or alias already exists."}')
         else:
             self.clients['name'] = clientAddress
+            self.send('{"command":"msg", "handle":"Server", "message":"Welcome!"}', clientAddress)
 
     def msgAll(self, msg):
         for address in self.clients.values():
@@ -50,12 +48,16 @@ class Server:
         if address:
             self.send(msg, address)
         else:
-            self.send({"command":"error", "message":"Error: Handle or alias not found."}, clientAddress)
+            self.send('{"command":"error", "message":"Error: Handle or alias not found."}', clientAddress)
 
     def send(self, msg:str, address:tuple):
         bytesToSend = str.encode(json.dumps(msg))
         self.UDPServerSocket.sendto(bytesToSend, address)
+
+    def recieve(self):
+        return self.UDPServerSocket.recvfrom(self.bufferSize)
         
+######################
 
 def main():
     server = Server()
@@ -85,7 +87,7 @@ def main():
                 server.msgOne(clientMsgStr, clientAddress)
             case _:
                 # Return error message
-                server.send({"command":"error", "message":"Error: Command parameters do not match or is not allowed."}, clientAddress)
+                server.send('{"command":"error", "message":"Error: Command parameters do not match or is not allowed."}', clientAddress)
 
 
 main()
