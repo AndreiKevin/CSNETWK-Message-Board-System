@@ -99,7 +99,7 @@ def parseInput(input):
             print("Error: Command parameters do not match or is not allowed.")
         else:
             client.msgOne(s)
-    elif "/question" in input:
+    elif "/?" in input:
         if not len(s)==1:
             print("Error: Command parameters do not match or is not allowed.")
         else:
