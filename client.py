@@ -54,7 +54,7 @@ class Client:
 
     def register(self, s):
         if self.connected:
-            s[0][0] = ''
+            s[0] = s[0].replace('/', '')
             command = s[0]
             handle = s[1]
 
@@ -64,7 +64,7 @@ class Client:
 
     def msgAll(self, s):
         if self.connected:
-            s[0][0] = ''
+            s[0] = s[0].replace('/', '')
             command = s[0]
             message = ' '.join(word for word in s[1::])
             self.send(str({"command":command, "message":message}), self.serverAddressPort)
@@ -74,7 +74,7 @@ class Client:
 
     def msgOne(self, s):
         if self.connected:
-            s[0][0] = ''
+            s[0] = s[0].replace('/', '')
             command = s[0]
             handle = s[1]
             message = ' '.join(word for word in s[2::])

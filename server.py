@@ -36,7 +36,9 @@ class Server:
             self.send(str({"command":"error", "message":"Error: Registration failed. Handle or alias already exists."}))
         else:
             self.clients['name'] = clientAddress
-            self.send(str({"command":"msg", "handle":"Server", "message":"Welcome!"}), clientAddress)
+            self.send(str({"command":"msg", "handle":"Server", "message":"Welcome "+name+"!"}), clientAddress)
+        
+        print("Current Clients:", self.clients)
 
     def msgAll(self, msg):
         for address in self.clients.values():
@@ -72,7 +74,7 @@ def main():
 
         # decode and turn to json
         clientMsgDict = ast.literal_eval(json.loads(byteMsg.decode()))
-        print("Server Recieved: ",clientMsgDict)
+        print("Server Recieved: ", clientMsgDict)
 
         # Respond
         match clientMsgDict["command"]:
@@ -81,7 +83,7 @@ def main():
             case "leave":
                 server.leave(clientAddress)
             case "register":
-                server.register(clientAddress)
+                server.register(clientMsgDict["handle"], clientAddress)
             case "all":
                 server.msgAll(clientMsgDict)
             case "msg":
