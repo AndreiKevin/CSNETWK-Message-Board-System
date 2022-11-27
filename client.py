@@ -2,6 +2,7 @@ import socket
 import json
 from tabulate import tabulate
 import threading
+import ast
 
 class Client:
     def __init__(self, bufferSize=1024):
@@ -16,9 +17,9 @@ class Client:
             bytesAddressPair = client.recieve()
             # Convert recieved inputs
             byteMsg = bytesAddressPair[0]
-            ServerMsgStr = json.loads(byteMsg.decode())
+            ServerMsgDict = ast.literal_eval(json.loads(byteMsg.decode()))
 
-            print("From Server:", ServerMsgStr['message'])
+            print("From Server:", ServerMsgDict["message"])
             
             if not self.connected:
                 break
@@ -26,14 +27,12 @@ class Client:
     def join(self, s):
         if self.connected == False:
             self.serverAddressPort = (s[1], s[2])
-
-            self.send(str({"command":"join"}), self.serverAddressPort)
-            self.connected = True
-            self.listener.start()
-
+            
             try:
                 # Send to server using created UDP socket
-                print()    
+                self.send(str({"command":"join"}), self.serverAddressPort)
+                self.connected = True
+                self.listener.start()
             except:
                 print("Error: Connection to the Message Board Server has failed! Please check IP Address and Port Number.")
         else:
@@ -46,8 +45,10 @@ class Client:
             self.serverAddressPort = None
             self.connected = False
             self.listener.join()
-            print("Disconnected from Server...")
-
+            # A thread can only be run once so assign a new one
+            self.listener = threading.Thread(target=self.listen)
+            print("Client: Disconnected from Server...")
+            
         except:
             print("Error: Disconnection failed. Please connect to the server first.")
 

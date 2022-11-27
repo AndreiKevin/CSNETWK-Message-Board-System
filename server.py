@@ -1,5 +1,6 @@
 import socket
 import json
+import ast
 
 class Server:
     def __init__(self, address=socket.gethostbyname(socket.gethostname()), port=20001, bufferSize=1024):
@@ -70,11 +71,11 @@ def main():
         clientAddress = bytesAddressPair[1]
 
         # decode and turn to json
-        clientMsgStr = json.loads(byteMsg.decode())
-        print("Server Recieved: ",clientMsgStr)
+        clientMsgDict = ast.literal_eval(json.loads(byteMsg.decode()))
+        print("Server Recieved: ",clientMsgDict)
 
         # Respond
-        match clientMsgStr[0]:
+        match clientMsgDict["command"]:
             case "join":
                 server.join(clientAddress)
             case "leave":
@@ -82,9 +83,9 @@ def main():
             case "register":
                 server.register(clientAddress)
             case "all":
-                server.msgAll(clientMsgStr)
+                server.msgAll(clientMsgDict)
             case "msg":
-                server.msgOne(clientMsgStr, clientAddress)
+                server.msgOne(clientMsgDict, clientAddress)
             case _:
                 # Return error message
                 server.send(str({"command":"error", "message":"Error: Command parameters do not match or is not allowed."}), clientAddress)
