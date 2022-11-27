@@ -39,7 +39,7 @@ class Server:
 
     def register(self, name, clientAddress):
         if name in self.clients:
-            self.send({"command":"error", "message":"[Server]: Error: Registration failed. Handle or alias already exists."})
+            self.send({"command":"error", "message":"[Server]: Error: Registration failed. Handle or alias already exists."}, clientAddress)
         else:
             self.clients[name] = clientAddress
             self.send({"command":"msg", "handle":"Server", "message":"[Server]: Welcome "+name+"!"}, clientAddress)
