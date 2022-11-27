@@ -19,7 +19,7 @@ class Client:
             byteMsg = bytesAddressPair[0]
             ServerMsgDict = ast.literal_eval(json.loads(byteMsg.decode()))
 
-            print("From Server:", ServerMsgDict["message"])
+            print(ServerMsgDict["message"])
             
             if not self.connected:
                 break
@@ -30,7 +30,7 @@ class Client:
             
             try:
                 # Send to server using created UDP socket
-                self.send(str({"command":"join"}), self.serverAddressPort)
+                self.send({"command":"join"}, self.serverAddressPort)
                 self.connected = True
                 self.listener.start()
             except:
@@ -41,7 +41,7 @@ class Client:
     def leave(self):
         # if not currently connected print error
         try:
-            self.send(str({"command":"leave"}), self.serverAddressPort)
+            self.send({"command":"leave"}, self.serverAddressPort)
             self.serverAddressPort = None
             self.connected = False
             self.listener.join()
@@ -58,7 +58,7 @@ class Client:
             command = s[0]
             handle = s[1]
 
-            self.send(str({"command":command, "handle":handle}), self.serverAddressPort)
+            self.send({"command":command, "handle":handle}, self.serverAddressPort)
         else:
             print("Error: Not Connected to a server!")
 
@@ -67,7 +67,7 @@ class Client:
             s[0] = s[0].replace('/', '')
             command = s[0]
             message = ' '.join(word for word in s[1::])
-            self.send(str({"command":command, "message":message}), self.serverAddressPort)
+            self.send({"command":command, "message":message}, self.serverAddressPort)
         else:
             print("Error: Not Connected to a server!")
 
@@ -79,7 +79,7 @@ class Client:
             handle = s[1]
             message = ' '.join(word for word in s[2::])
 
-            self.send(str({"command":command, "handle": handle, "message":message}), self.serverAddressPort)
+            self.send({"command":command, "handle": handle, "message":message}, self.serverAddressPort)
         else:
             print("Error: Not Connected to a server!")
 
@@ -97,8 +97,7 @@ class Client:
         print(tabulate(commands, headers=header))
 
     def send(self, msg:str, address:tuple):
-        bytesToSend = str.encode(json.dumps(msg))
-        print(bytesToSend, address)
+        bytesToSend = str.encode(json.dumps(str(msg)))
         self.UDPClientSocket.sendto(bytesToSend, (str(address[0]), int(address[1])))
 
     def recieve(self):

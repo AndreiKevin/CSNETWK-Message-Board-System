@@ -18,43 +18,56 @@ class Server:
         self.port = port
         self.UDPServerSocket.bind((self.address, self.port))
 
-    # This function finds the address based on the handle/alias name
-    def findHandle(self, handle):
+    # Given handle, returns address
+    def findAddress(self, handle):
         if handle in self.clients:
             return self.clients[handle]
         else:
             return False
 
+    # Given an address, returns handle
+    def findHandle(self, address):
+        for key, value in self.clients.items():
+            if address == value:
+                return key
+
     def join(self, clientAddress):
-        self.send(str({"command":"msg", "handle":"Server", "message":"Connection to the Message Board Server is successful!"}), clientAddress)
+        self.send({"command":"msg", "handle":"Server", "message":"[Server]: Connection to the Message Board Server is successful!"}, clientAddress)
 
     def leave(self, clientAddress):
-        self.send(str({"command":"msg", "handle":"Server", "message":"Connection closed. Thank you!"}), clientAddress)
+        self.send({"command":"msg", "handle":"Server", "message":"[Server]: Connection closed. Thank you!"}, clientAddress)
 
     def register(self, name, clientAddress):
         if name in self.clients:
-            self.send(str({"command":"error", "message":"Error: Registration failed. Handle or alias already exists."}))
+            self.send({"command":"error", "message":"[Server]: Error: Registration failed. Handle or alias already exists."})
         else:
             self.clients[name] = clientAddress
-            self.send(str({"command":"msg", "handle":"Server", "message":"Welcome "+name+"!"}), clientAddress)
+            self.send({"command":"msg", "handle":"Server", "message":"[Server]: Welcome "+name+"!"}, clientAddress)
         
         print("Current Clients:", self.clients)
 
-    def msgAll(self, msg):
+    def msgAll(self, msg, clientAddress):
+        senderHandle = self.findHandle(clientAddress)
+        msg["message"] = senderHandle + ': ' + msg["message"]
         for address in self.clients.values():
             self.send(msg, address)
 
-    def msgOne(self, msg:str, clientAddress:tuple):
+    def msgOne(self, msg:dict, clientAddress:tuple):
         # find address of handler in dictionary
-        address = self.findHandle(msg["handle"])
+        address = self.findAddress(msg["handle"])
+        serverResponse = {"command":"msg", "handle":"Server", "message":"[To " + msg["handle"] + "]: " + msg["message"]}
         
+        senderHandle = self.findHandle(clientAddress)
+        msg["message"] = '[From ' + senderHandle + ']: ' + msg["message"]
+
         if address:
+            self.send(serverResponse, clientAddress)
             self.send(msg, address)
         else:
-            self.send(str({"command":"error", "message":"Error: Handle or alias not found."}), clientAddress)
+            self.send({"command":"error", "message":"Error: Handle or alias not found."}, clientAddress)
 
-    def send(self, msg:str, address:tuple):
-        bytesToSend = str.encode(json.dumps(msg))
+    def send(self, msg:dict, address:tuple):
+        bytesToSend = str.encode(json.dumps(str(msg)))
         self.UDPServerSocket.sendto(bytesToSend, address)
 
     def recieve(self):
@@ -85,7 +98,7 @@ def main():
             case "register":
                 server.register(clientMsgDict["handle"], clientAddress)
             case "all":
-                server.msgAll(clientMsgDict)
+                server.msgAll(clientMsgDict, clientAddress)
             case "msg":
                 server.msgOne(clientMsgDict, clientAddress)
             case _:
