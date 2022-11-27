@@ -35,7 +35,7 @@ class Server:
         if name in self.clients:
             self.send(str({"command":"error", "message":"Error: Registration failed. Handle or alias already exists."}))
         else:
-            self.clients['name'] = clientAddress
+            self.clients[name] = clientAddress
             self.send(str({"command":"msg", "handle":"Server", "message":"Welcome "+name+"!"}), clientAddress)
         
         print("Current Clients:", self.clients)
