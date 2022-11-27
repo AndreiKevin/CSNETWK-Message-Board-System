@@ -31,6 +31,10 @@ class Server:
             if address == value:
                 return key
 
+        # If handle is not found, use address
+        self.send({"command":"msg", "handle":"Server", "message":"[Server]: Register to recieve messages."}, address)
+        return address[0] + ' ' + str(address[1])
+
     def join(self, clientAddress):
         self.send({"command":"msg", "handle":"Server", "message":"[Server]: Connection to the Message Board Server is successful!"}, clientAddress)
 
@@ -48,6 +52,7 @@ class Server:
 
     def msgAll(self, msg, clientAddress):
         senderHandle = self.findHandle(clientAddress)
+
         msg["message"] = senderHandle + ': ' + msg["message"]
         for address in self.clients.values():
             self.send(msg, address)
@@ -56,15 +61,14 @@ class Server:
         # find address of handler in dictionary
         address = self.findAddress(msg["handle"])
         serverResponse = {"command":"msg", "handle":"Server", "message":"[To " + msg["handle"] + "]: " + msg["message"]}
-        
         senderHandle = self.findHandle(clientAddress)
+        
         msg["message"] = '[From ' + senderHandle + ']: ' + msg["message"]
-
         if address:
             self.send(serverResponse, clientAddress)
             self.send(msg, address)
         else:
-            self.send({"command":"error", "message":"Error: Handle or alias not found."}, clientAddress)
+            self.send({"command":"error", "message":"[Server]: Error: Handle or alias not found."}, clientAddress)
 
     def send(self, msg:dict, address:tuple):
         bytesToSend = str.encode(json.dumps(str(msg)))
@@ -103,7 +107,7 @@ def main():
                 server.msgOne(clientMsgDict, clientAddress)
             case _:
                 # Return error message
-                server.send(str({"command":"error", "message":"Error: Command parameters do not match or is not allowed."}), clientAddress)
+                server.send(str({"command":"error", "message":"[Server]: Error: Command parameters do not match or is not allowed."}), clientAddress)
 
 
 main()
