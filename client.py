@@ -1,54 +1,87 @@
 import socket
 import json
 from tabulate import tabulate
+import threading
 
 class Client:
-    def __init__(self, address=socket.gethostbyname(socket.gethostname()), port=20001, bufferSize=1024):
-        self.serverAddressPort = (address, port)
+    def __init__(self, bufferSize=1024):
+        self.connected = False
+        self.listener = threading.Thread(target=self.listen)
+        self.serverAddressPort = None
         self.bufferSize = bufferSize
         self.UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
-        self.UDPClientSocket.bind((socket.gethostbyname(socket.gethostname()), 20002))
-        
+
+    def listen(self):
+        while True:
+            bytesAddressPair = client.recieve()
+            # Convert recieved inputs
+            byteMsg = bytesAddressPair[0]
+            ServerMsgStr = json.loads(byteMsg.decode())
+
+            print("From Server:", ServerMsgStr['message'])
+            
+            if not self.connected:
+                break
 
     def join(self, s):
-        self.serverAddressPort = (s[1], s[2])
-        
-        try:
-            # Send to server using created UDP socket
-            self.send('{"command":"join"}', self.serverAddressPort)
-        except:
-            print("Error: Connection to the Message Board Server has failed! Please check IP Address and Port Number.")
-        
+        if self.connected == False:
+            self.serverAddressPort = (s[1], s[2])
+
+            self.send(str({"command":"join"}), self.serverAddressPort)
+            self.connected = True
+            self.listener.start()
+
+            try:
+                # Send to server using created UDP socket
+                print()    
+            except:
+                print("Error: Connection to the Message Board Server has failed! Please check IP Address and Port Number.")
+        else:
+            print("Currently Connected. Please do /leave first.")
+
     def leave(self):
         # if not currently connected print error
         try:
-            self.send('{"command":"leave"}', self.serverAddressPort)
+            self.send(str({"command":"leave"}), self.serverAddressPort)
             self.serverAddressPort = None
+            self.connected = False
+            self.listener.join()
+            print("Disconnected from Server...")
+
         except:
             print("Error: Disconnection failed. Please connect to the server first.")
 
     def register(self, s):
-        s[0][0] = ''
-        command = s[0]
-        handle = s[1]
+        if self.connected:
+            s[0][0] = ''
+            command = s[0]
+            handle = s[1]
 
-        self.send('{"command":command, "handle":handle}', self.serverAddressPort)
+            self.send(str({"command":command, "handle":handle}), self.serverAddressPort)
+        else:
+            print("Error: Not Connected to a server!")
 
     def msgAll(self, s):
-        s[0][0] = ''
-        command = s[0]
-        message = ' '.join(word for word in s[1::])
+        if self.connected:
+            s[0][0] = ''
+            command = s[0]
+            message = ' '.join(word for word in s[1::])
+            self.send(str({"command":command, "message":message}), self.serverAddressPort)
+        else:
+            print("Error: Not Connected to a server!")
 
-        self.send('{"command":command, "message":message}', self.serverAddressPort)
 
     def msgOne(self, s):
-        s[0][0] = ''
-        command = s[0]
-        handle = s[1]
-        message = ' '.join(word for word in s[2::])
+        if self.connected:
+            s[0][0] = ''
+            command = s[0]
+            handle = s[1]
+            message = ' '.join(word for word in s[2::])
 
-        self.send('{"command":command, "handle": handle, "message":message}', self.serverAddressPort)
-        
+            self.send(str({"command":command, "handle": handle, "message":message}), self.serverAddressPort)
+        else:
+            print("Error: Not Connected to a server!")
+
     def question(self):
         # Print all description of commands
         commands = [
@@ -64,7 +97,8 @@ class Client:
 
     def send(self, msg:str, address:tuple):
         bytesToSend = str.encode(json.dumps(msg))
-        self.UDPClientSocket.sendto(bytesToSend, address)
+        print(bytesToSend, address)
+        self.UDPClientSocket.sendto(bytesToSend, (str(address[0]), int(address[1])))
 
     def recieve(self):
         return self.UDPClientSocket.recvfrom(self.bufferSize)
@@ -76,32 +110,32 @@ client = Client()
 def parseInput(input):
     s = input.split()
     
-    if "/join" in input:
+    if "/join" in s:
         if not len(s)==3:
             print("Error: Command parameters do not match or is not allowed.")
         else:
             client.join(s)
-    elif "/leave" in input:
+    elif "/leave" in s:
         if not len(s)==1:
             print("Error: Command parameters do not match or is not allowed.")
         else:
             client.leave()
-    elif "/register" in input:
+    elif "/register" in s:
         if not len(s)==2:
             print("Error: Command parameters do not match or is not allowed.")
         else:
             client.register(s)
-    elif "/all" in input:
+    elif "/all" in s:
         if len(s)<2:
             print("Error: Command parameters do not match or is not allowed.")
         else:
             client.msgAll(s)
-    elif "/msg" in input:
+    elif "/msg" in s:
         if len(s)<3:
             print("Error: Command parameters do not match or is not allowed.")
         else:
             client.msgOne(s)
-    elif "/?" in input:
+    elif "/?" in s:
         if not len(s)==1:
             print("Error: Command parameters do not match or is not allowed.")
         else:
@@ -109,18 +143,15 @@ def parseInput(input):
     else:
         print("Error: Command not found")
 
-def main():
-    # take input
+def clientProgram():
     while True:
         parseInput(input())
 
-        bytesAddressPair = client.recieve()
-        # Convert recieved inputs
-        byteMsg = bytesAddressPair[0]
-        byteAddress = bytesAddressPair[1]
-        ServerMsgStr = str.decode(json.loads(byteMsg))
+def main():
+    print("Client Started...")
+    program = threading.Thread(target=clientProgram)
 
-        print(ServerMsgStr['message'])
+    program.start()
 
 
 main()

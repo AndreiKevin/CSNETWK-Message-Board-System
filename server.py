@@ -25,17 +25,17 @@ class Server:
             return False
 
     def join(self, clientAddress):
-        self.send('{"command":"msg", "handle":"Server", "message":"Connection to the Message Board Server is successful!}', clientAddress)
+        self.send(str({"command":"msg", "handle":"Server", "message":"Connection to the Message Board Server is successful!"}), clientAddress)
 
     def leave(self, clientAddress):
-        self.send('{"command":"msg", "handle":"Server", "message":"Connection closed. Thank you!"}', clientAddress)
+        self.send(str({"command":"msg", "handle":"Server", "message":"Connection closed. Thank you!"}), clientAddress)
 
     def register(self, name, clientAddress):
         if name in self.clients:
-            self.send('{"command":"error", "message":"Error: Registration failed. Handle or alias already exists."}')
+            self.send(str({"command":"error", "message":"Error: Registration failed. Handle or alias already exists."}))
         else:
             self.clients['name'] = clientAddress
-            self.send('{"command":"msg", "handle":"Server", "message":"Welcome!"}', clientAddress)
+            self.send(str({"command":"msg", "handle":"Server", "message":"Welcome!"}), clientAddress)
 
     def msgAll(self, msg):
         for address in self.clients.values():
@@ -48,7 +48,7 @@ class Server:
         if address:
             self.send(msg, address)
         else:
-            self.send('{"command":"error", "message":"Error: Handle or alias not found."}', clientAddress)
+            self.send(str({"command":"error", "message":"Error: Handle or alias not found."}), clientAddress)
 
     def send(self, msg:str, address:tuple):
         bytesToSend = str.encode(json.dumps(msg))
@@ -62,19 +62,19 @@ class Server:
 def main():
     server = Server()
 
+    print(f'Server IP: {server.address}\nServer Port: {server.port}')
     # Listen for incoming datagrams
     while(True):
         bytesAddressPair = server.recieve()
         byteMsg = bytesAddressPair[0]
-        byteAddress = bytesAddressPair[1]
+        clientAddress = bytesAddressPair[1]
 
-        # decode
-        clientMsgJson = str.decode(byteMsg)
-        clientMsgStr = json.loads(clientMsgJson)
-        clientAddress = str.decode(byteAddress)
+        # decode and turn to json
+        clientMsgStr = json.loads(byteMsg.decode())
+        print("Server Recieved: ",clientMsgStr)
 
         # Respond
-        match clientMsgStr["command"]:
+        match clientMsgStr[0]:
             case "join":
                 server.join(clientAddress)
             case "leave":
@@ -87,7 +87,7 @@ def main():
                 server.msgOne(clientMsgStr, clientAddress)
             case _:
                 # Return error message
-                server.send('{"command":"error", "message":"Error: Command parameters do not match or is not allowed."}', clientAddress)
+                server.send(str({"command":"error", "message":"Error: Command parameters do not match or is not allowed."}), clientAddress)
 
 
 main()
