@@ -132,32 +132,32 @@ client = Client()
 def parseInput(input):
     s = input.split()
     
-    if "/join" in s:
+    if "/join" in s[0]:
         if not len(s)==3:
             print("Error: Command parameters do not match or is not allowed.")
         else:
             client.join(s)
-    elif "/leave" in s:
+    elif "/leave" in s[0]:
         if not len(s)==1:
             print("Error: Command parameters do not match or is not allowed.")
         else:
             client.leave()
-    elif "/register" in s:
+    elif "/register" in s[0]:
         if not len(s)==2:
             print("Error: Command parameters do not match or is not allowed.")
         else:
             client.register(s)
-    elif "/all" in s:
+    elif "/all" in s[0]:
         if len(s)<2:
             print("Error: Command parameters do not match or is not allowed.")
         else:
             client.msgAll(s)
-    elif "/msg" in s:
+    elif "/msg" in s[0]:
         if len(s)<3:
             print("Error: Command parameters do not match or is not allowed.")
         else:
             client.msgOne(s)
-    elif "/?" in s:
+    elif "/?" in s[0]:
         if not len(s)==1:
             print("Error: Command parameters do not match or is not allowed.")
         else:
