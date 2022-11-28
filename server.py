@@ -32,7 +32,7 @@ class Server:
                 return key
 
         # If handle is not found, use address
-        self.send({"command":"msg", "handle":"Server", "message":"[Server]: Register to recieve messages."}, address)
+        self.send({"command":"msg", "handle":"Server", "message":"[Server]: Message sent but register to also recieve messages."}, address)
         return address[0] + ' ' + str(address[1])
 
     def join(self, clientAddress):

@@ -4,24 +4,46 @@ from tabulate import tabulate
 import threading
 import ast
 
+class BaseThread(threading.Thread):
+    def __init__(self, callback=None, callback_args=None, *args, **kwargs):
+        target = kwargs.pop('target')
+        super(BaseThread, self).__init__(target=self.target_with_callback, *args, **kwargs)
+        self.callback = callback
+        self.method = target
+        self.callback_args = callback_args
+
+    def target_with_callback(self):
+        self.method()
+        if self.callback is not None:
+            if self.callback_args is not None:
+                self.callback(*self.callback_args)
+            else:
+                self.callback()
+
 class Client:
     def __init__(self, bufferSize=1024):
         self.connected = False
-        self.listener = threading.Thread(target=self.listen)
+        self.listener = BaseThread(target=self.listen, callback=self.resetConnection)
         self.serverAddressPort = None
         self.bufferSize = bufferSize
         self.UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 
     def listen(self):
         while True:
-            bytesAddressPair = client.recieve()
-            # Convert recieved inputs
-            byteMsg = bytesAddressPair[0]
-            ServerMsgDict = ast.literal_eval(json.loads(byteMsg.decode()))
+            # Attempt to listen. Sometimes an error occurs even if already connected. 
+            try:
+                bytesAddressPair = client.recieve()
+                # Convert recieved inputs
+                byteMsg = bytesAddressPair[0]
+                ServerMsgDict = ast.literal_eval(json.loads(byteMsg.decode()))
 
-            print(ServerMsgDict["message"])
-            
-            if not self.connected:
+                print(ServerMsgDict["message"])
+                
+                if not self.connected:
+                    print("[Client]: Disconnected from Server...")
+                    break
+            except:
+                print("Recieve Error: Connection to the Message Board Server has failed! Please check IP Address and Port Number.")
                 break
 
     def join(self, s):
@@ -34,23 +56,24 @@ class Client:
                 self.connected = True
                 self.listener.start()
             except:
-                print("Error: Connection to the Message Board Server has failed! Please check IP Address and Port Number.")
+                self.connected = False
+                print("Join Error: Connection to the Message Board Server has failed! Please check IP Address and Port Number.")
         else:
             print("Currently Connected. Please do /leave first.")
 
+    def resetConnection(self):
+        self.serverAddressPort = None
+        self.connected = False
+        # A thread can only be run once so assign a new one
+        self.listener = BaseThread(target=self.listen, callback=self.resetConnection)
+
     def leave(self):
         # if not currently connected print error
-        try:
+        if self.connected:
             self.send({"command":"leave"}, self.serverAddressPort)
-            self.serverAddressPort = None
             self.connected = False
-            self.listener.join()
-            # A thread can only be run once so assign a new one
-            self.listener = threading.Thread(target=self.listen)
-            print("Client: Disconnected from Server...")
-            
-        except:
-            print("Error: Disconnection failed. Please connect to the server first.")
+        else:
+            print("Error: Disconnection failed. Please connect to a server first.")
 
     def register(self, s):
         if self.connected:
@@ -70,7 +93,6 @@ class Client:
             self.send({"command":command, "message":message}, self.serverAddressPort)
         else:
             print("Error: Not Connected to a server!")
-
 
     def msgOne(self, s):
         if self.connected:
