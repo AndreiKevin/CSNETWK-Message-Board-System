@@ -62,10 +62,10 @@ class Client:
             print("Currently Connected. Please do /leave first.")
 
     def resetConnection(self):
-        self.serverAddressPort = None
-        self.connected = False
         # A thread can only be run once so assign a new one
         self.listener = BaseThread(target=self.listen, callback=self.resetConnection)
+        self.serverAddressPort = None
+        self.connected = False
 
     def leave(self):
         # if not currently connected print error
