@@ -32,8 +32,8 @@ class Server:
                 return key
 
         # If handle is not found, use address
-        self.send({"command":"msg", "handle":"Server", "message":"[Server]: Register to recieve messages."}, address)
-        return address[0] + ' ' + str(address[1])
+        self.send({"command":"error", "handle":"Server", "message":"[Server]: Error You are not registered. Do /register <name>."}, address)
+        return None
 
     def join(self, clientAddress):
         self.send({"command":"msg", "handle":"Server", "message":"[Server]: Connection to the Message Board Server is successful!"}, clientAddress)
@@ -53,22 +53,26 @@ class Server:
     def msgAll(self, msg, clientAddress):
         senderHandle = self.findHandle(clientAddress)
 
-        msg["message"] = senderHandle + ': ' + msg["message"]
-        for address in self.clients.values():
-            self.send(msg, address)
+        if senderHandle is not None:
+            msg["message"] = senderHandle + ': ' + msg["message"]
+            for address in self.clients.values():
+                self.send(msg, address)
 
     def msgOne(self, msg:dict, clientAddress:tuple):
         # find address of handler in dictionary
-        address = self.findAddress(msg["handle"])
-        serverResponse = {"command":"msg", "handle":"Server", "message":"[To " + msg["handle"] + "]: " + msg["message"]}
         senderHandle = self.findHandle(clientAddress)
         
-        msg["message"] = '[From ' + senderHandle + ']: ' + msg["message"]
-        if address:
-            self.send(serverResponse, clientAddress)
-            self.send(msg, address)
-        else:
-            self.send({"command":"error", "message":"[Server]: Error: Handle or alias not found."}, clientAddress)
+        if senderHandle is not None:
+            address = self.findAddress(msg["handle"])
+            serverResponse = {"command":"msg", "handle":"Server", "message":"[To " + msg["handle"] + "]: " + msg["message"]}
+            
+            
+            msg["message"] = '[From ' + senderHandle + ']: ' + msg["message"]
+            if address:
+                self.send(serverResponse, clientAddress)
+                self.send(msg, address)
+            else:
+                self.send({"command":"error", "message":"[Server]: Error: Handle or alias not found."}, clientAddress)
 
     def send(self, msg:dict, address:tuple):
         bytesToSend = str.encode(json.dumps(str(msg)))
