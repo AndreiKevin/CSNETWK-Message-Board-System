@@ -32,18 +32,23 @@ class Server:
                 return key
 
         # If handle is not found, use address
-        self.send({"command":"error", "handle":"Server", "message":"[Server]: Error You are not registered. Do /register <name>."}, address)
         return None
 
     def join(self, clientAddress):
         self.send({"command":"msg", "handle":"Server", "message":"[Server]: Connection to the Message Board Server is successful!"}, clientAddress)
 
     def leave(self, clientAddress):
+        handle = self.findHandle(clientAddress)
+        if handle in self.clients:
+            self.clients.pop(handle)
+            
         self.send({"command":"msg", "handle":"Server", "message":"[Server]: Connection closed. Thank you!"}, clientAddress)
 
     def register(self, name, clientAddress):
         if name in self.clients:
             self.send({"command":"error", "message":"[Server]: Error: Registration failed. Handle or alias already exists."}, clientAddress)
+        elif self.findHandle(clientAddress) is not None:
+            self.send({"command":"error", "message":"[Server]: Error: You are already registered!"}, clientAddress)
         else:
             self.clients[name] = clientAddress
             self.send({"command":"msg", "handle":"Server", "message":"[Server]: Welcome "+name+"!"}, clientAddress)
@@ -57,11 +62,13 @@ class Server:
             msg["message"] = senderHandle + ': ' + msg["message"]
             for address in self.clients.values():
                 self.send(msg, address)
+        else:
+            self.send({"command":"error", "handle":"Server", "message":"[Server]: Error You are not registered. Do /register <name>."}, clientAddress)
 
     def msgOne(self, msg:dict, clientAddress:tuple):
         # find address of handler in dictionary
         senderHandle = self.findHandle(clientAddress)
-        
+
         if senderHandle is not None:
             address = self.findAddress(msg["handle"])
             serverResponse = {"command":"msg", "handle":"Server", "message":"[To " + msg["handle"] + "]: " + msg["message"]}
@@ -73,6 +80,8 @@ class Server:
                 self.send(msg, address)
             else:
                 self.send({"command":"error", "message":"[Server]: Error: Handle or alias not found."}, clientAddress)
+        else:
+            self.send({"command":"error", "handle":"Server", "message":"[Server]: Error You are not registered. Do /register <name>."}, clientAddress)
 
     def send(self, msg:dict, address:tuple):
         bytesToSend = str.encode(json.dumps(str(msg)))
