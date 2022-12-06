@@ -1,7 +1,5 @@
 import customtkinter
 from tabulate import tabulate
-import threading
-from client import Client
 
 customtkinter.set_appearance_mode("dark")
 customtkinter.set_default_color_theme("dark-blue")
@@ -11,9 +9,6 @@ class App(customtkinter.CTk):
     height = 400
 
     def __init__(self):
-        self.client = Client()
-        self.listener = threading.Thread(target=self.listen)
-        self.listener.start()
         super().__init__()
 
         self.geometry(f"{self.width}x{self.height}")
@@ -63,60 +58,53 @@ class App(customtkinter.CTk):
         layoutFrame = customtkinter.CTkFrame(master=self)
         layoutFrame.grid(row=2, column=0, padx=20, pady=(20, 0), sticky="nsew")
         layoutFrame.rowconfigure(0, weight=1)
-        layoutFrame.columnconfigure((0, 1, 2), weight=1)
-
-        #Msg to who Input
-        self.destination = customtkinter.CTkEntry(master=layoutFrame, width=150, placeholder_text="Who to message?")
-        self.destination.grid(row=2, column=0, padx=20, pady=20, sticky="ew")
+        layoutFrame.columnconfigure((0, 1), weight=1)
 
         #Text Input
-        self.user_input = customtkinter.CTkEntry(master=layoutFrame, width=self.width - 350, placeholder_text="Enter Message")
-        self.user_input.grid(row=2, column=1, padx=5, pady=20, sticky="ew")
+        self.user_input = customtkinter.CTkEntry(master=layoutFrame, width=self.width - 200, placeholder_text="Enter Message")
+        self.user_input.grid(row=2, column=0, padx=20, pady=20, sticky="ew")
         
         #Text Submit Button
-        textSubmit = customtkinter.CTkButton(master=layoutFrame, width=100, command=self.button_send_message, text="Enter")
-        textSubmit.grid(row=2, column=2, padx=20, pady=20, sticky="ew")
+        textSubmit = customtkinter.CTkButton(master=layoutFrame, width=50, command=self.button_send_message, text="Enter")
+        textSubmit.grid(row=2, column=1, padx=20, pady=20, sticky="ew")
 
     def button_send_message(self):
         self.textbox.configure(state="normal")
-        if self.destination.get() == "all":
-            self.client.parseInput("/all " + self.user_input.get())
-        else:
-            self.client.parseInput("/msg " + self.destination.get() + " " + self.user_input.get())
+        self.textbox.insert("insert", self.user_input.get() + "\n")
         self.textbox.configure(state="disabled")
         self.user_input.delete(0, "end")
     
     def button_join(self):
         self.textbox.configure(state="normal")
-        self.client.parseInput("/join " + self.idAddress.get() + " " + self.port.get())
+        self.textbox.insert("insert", "Error: Connection to the Message Board Server has failed! Please check IP Address and Port Number.\n")
         self.textbox.configure(state="disabled")
         self.idAddress.delete(0, "end")
         self.port.delete(0, "end")
 
     def button_register(self):
         self.textbox.configure(state="normal")
-        self.client.parseInput("/register " + self.registerUser.get())
+        self.textbox.insert("insert", "Error: Registration failed. Handle or alias already exists.\n")
         self.textbox.configure(state="disabled")
         self.registerUser.delete(0, "end")
 
     def button_leave(self):
         self.textbox.configure(state="normal")
-        self.client.parseInput("/leave")
+        self.textbox.insert("insert", "Error: Disconnection failed. Please connect to the server first.\n")
         self.textbox.configure(state="disabled")
 
     def button_help(self):
+        commands = [
+            ["/all <message>", "Send message to all"],
+            ["/msg <handle> <message>", "Send direct message to a single handle"],
+        ]
+        header = ["Command", "Description"]
+        print(tabulate(commands, headers=header))
         self.textbox.configure(state="normal")
-        self.textbox.insert("insert", "Help: You must first join a server by inputting IP and port. Don't forget to register! If you want to message everyone then put the word 'all' in who to message box" + "\n")
+        self.textbox.insert("insert", tabulate(commands, headers=header) + "\n")
         self.textbox.configure(state="disabled")
     
-    def printOutput(self):
-        self.textbox.insert("insert", self.client.output[-1] + "\n")
-    
-    def listen(self):
-        while True:
-            self.client.event.wait()
-            self.printOutput()
-            self.client.event.clear()
+        
 
-app = App()
-app.mainloop()
+if __name__ == "__main__":
+    app = App()
+    app.mainloop()
