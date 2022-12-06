@@ -46,7 +46,6 @@ class Client:
             except:
                 print("Recieve Error: Connection to the Message Board Server has failed! Please check IP Address and Port Number.")
                 break
-        print("Stopping listening...")
 
     def test_join(self):
         try:
