@@ -3,6 +3,7 @@ import json
 from tabulate import tabulate
 import threading
 import ast
+import select
 
 class BaseThread(threading.Thread):
     def __init__(self, callback=None, callback_args=None, *args, **kwargs):
@@ -45,6 +46,29 @@ class Client:
             except:
                 print("Recieve Error: Connection to the Message Board Server has failed! Please check IP Address and Port Number.")
                 break
+        print("Stopping listening...")
+
+    def test_join(self):
+        try:
+            # If there is no response from the server in 2 seconds then the connection failed
+            ready = select.select([self.UDPClientSocket], [], [], 2)
+            if ready[0]:
+                bytesAddressPair = client.recieve()
+                # Convert recieved inputs
+                byteMsg = bytesAddressPair[0]
+                ServerMsgDict = ast.literal_eval(json.loads(byteMsg.decode()))
+                print(ServerMsgDict["message"])
+                # If join testing is successful, start listening continuously
+                self.listener.start()
+                
+                if not self.connected:
+                    print("[Client]: Disconnected from Server...")
+            else:
+                print("Recieve Error: Connection to the Message Board Server has failed! Please check IP Address and Port Number.")
+                self.resetConnection()
+        except:
+            print("Recieve Error: Connection to the Message Board Server has failed! Please check IP Address and Port Number.")
+            self.resetConnection()
 
     def join(self, s):
         if self.connected == False:
@@ -52,9 +76,9 @@ class Client:
             
             try:
                 # Send to server using created UDP socket
-                self.send({"command":"join"}, self.serverAddressPort)
                 self.connected = True
-                self.listener.start()
+                self.send({"command":"join"}, self.serverAddressPort)
+                self.test_join()
             except:
                 self.connected = False
                 print("Join Error: Connection to the Message Board Server has failed! Please check IP Address and Port Number.")
@@ -132,36 +156,39 @@ client = Client()
 def parseInput(input):
     s = input.split()
     
-    if "/join" in s[0]:
-        if not len(s)==3:
-            print("Error: Command parameters do not match or is not allowed.")
+    if not(s == []):
+        if "/join" in s[0]:
+            if not len(s)==3:
+                print("Error: Command parameters do not match or is not allowed.")
+            else:
+                client.join(s)
+        elif "/leave" in s[0]:
+            if not len(s)==1:
+                print("Error: Command parameters do not match or is not allowed.")
+            else:
+                client.leave()
+        elif "/register" in s[0]:
+            if not len(s)==2:
+                print("Error: Command parameters do not match or is not allowed.")
+            else:
+                client.register(s)
+        elif "/all" in s[0]:
+            if len(s)<2:
+                print("Error: Command parameters do not match or is not allowed.")
+            else:
+                client.msgAll(s)
+        elif "/msg" in s[0]:
+            if len(s)<3:
+                print("Error: Command parameters do not match or is not allowed.")
+            else:
+                client.msgOne(s)
+        elif "/?" in s[0]:
+            if not len(s)==1:
+                print("Error: Command parameters do not match or is not allowed.")
+            else:
+                client.question()
         else:
-            client.join(s)
-    elif "/leave" in s[0]:
-        if not len(s)==1:
-            print("Error: Command parameters do not match or is not allowed.")
-        else:
-            client.leave()
-    elif "/register" in s[0]:
-        if not len(s)==2:
-            print("Error: Command parameters do not match or is not allowed.")
-        else:
-            client.register(s)
-    elif "/all" in s[0]:
-        if len(s)<2:
-            print("Error: Command parameters do not match or is not allowed.")
-        else:
-            client.msgAll(s)
-    elif "/msg" in s[0]:
-        if len(s)<3:
-            print("Error: Command parameters do not match or is not allowed.")
-        else:
-            client.msgOne(s)
-    elif "/?" in s[0]:
-        if not len(s)==1:
-            print("Error: Command parameters do not match or is not allowed.")
-        else:
-            client.question()
+            print("Error: Command not found")
     else:
         print("Error: Command not found")
 

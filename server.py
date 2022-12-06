@@ -3,7 +3,7 @@ import json
 import ast
 
 class Server:
-    def __init__(self, address=socket.gethostbyname(socket.gethostname()), port=20001, bufferSize=1024):
+    def __init__(self, address="127.0.0.1", port=12345, bufferSize=1024):
         # self.clients is of type dict{string(handle) : tuple(address, port)}
         self.clients = {}
         self.bufferSize = bufferSize
