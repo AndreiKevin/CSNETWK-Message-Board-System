@@ -27,7 +27,6 @@ class Client(customtkinter.CTk):
 
     def __init__(self, bufferSize=1024):
         self.connected = False
-        self.listener = BaseThread(target=self.listen, callback=self.resetConnection)
         self.serverAddressPort = None
         self.bufferSize = bufferSize
         self.UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
@@ -122,29 +121,10 @@ class Client(customtkinter.CTk):
 
     def button_help(self):
         self.textbox.configure(state="normal")
-        self.textbox.insert("insert", "Help: You must first join a server by inputting IP and port. Don't forget to register! If you want to message everyone then put the word 'all' in who to message box" + "\n")
+        self.responses.append("insert", "Help: You must first join a server by inputting IP and port. Don't forget to register! If you want to message everyone then put the word 'all' in who to message box" + "\n")
         self.textbox.configure(state="disabled")
     
     ########################
-
-    def listen(self):
-        while True:
-            # Attempt to listen. Sometimes an error occurs even if already connected. 
-            try:
-                bytesAddressPair = self.recieve()
-                # Convert recieved inputs
-                byteMsg = bytesAddressPair[0]
-                ServerMsgDict = ast.literal_eval(json.loads(byteMsg.decode()))
-
-                print(ServerMsgDict["message"])
-                self.textbox.insert("insert", ServerMsgDict["message"] + "\n") 
-                
-                if not self.connected:
-                    self.textbox.insert("insert", "[Client]: Disconnected from Server..." + "\n") 
-                    break
-            except:
-                self.textbox.insert("insert", "Recieve Error: Connection to the Message Board Server has failed! Please check IP Address and Port Number." + "\n") 
-                break
 
     def join(self, s):
         if self.connected == False:
@@ -157,34 +137,28 @@ class Client(customtkinter.CTk):
                 self.listener.start()
             except:
                 self.connected = False
-                self.textbox.insert("insert", "Join Error: Connection to the Message Board Server has failed! Please check IP Address and Port Number." + "\n")
+                self.responses.append("insert", "Join Error: Connection to the Message Board Server has failed! Please check IP Address and Port Number." + "\n")
         else:
-            self.textbox.insert("insert", "Currently Connected. Please do /leave first." + "\n")
-
-    def resetConnection(self):
-        # A thread can only be run once so assign a new one
-        self.listener = BaseThread(target=self.listen, callback=self.resetConnection)
-        self.serverAddressPort = None
-        self.connected = False
+            self.responses.append("insert", "Currently Connected. Please do /leave first." + "\n")
 
     def leave(self):
         if self.connected:
             self.send({"command":"leave"}, self.serverAddressPort)
             self.connected = False
         else:
-            self.textbox.insert("insert", "Error: Disconnection failed. Please connect to a server first." + "\n")
+            self.responses.append("insert", "Error: Disconnection failed. Please connect to a server first." + "\n")
 
     def register(self, s):
         if self.connected:
             self.send({"command":"register", "handle":s}, self.serverAddressPort)
         else:
-            self.textbox.insert("insert", "Error: Not Connected to a server!" + "\n")
+            self.responses.append("insert", "Error: Not Connected to a server!" + "\n")
 
     def msgAll(self, s):
         if self.connected:
             self.send({"command":"all", "message":s}, self.serverAddressPort)
         else:
-            self.textbox.insert("insert", "Error: Not Connected to a server!" + "\n")
+            self.responses.append("insert", "Error: Not Connected to a server!" + "\n")
 
     def msgOne(self, s):
         if self.connected:
@@ -193,16 +167,45 @@ class Client(customtkinter.CTk):
 
             self.send({"command":"msg", "handle": handle, "message":msg}, self.serverAddressPort)
         else:
-            self.textbox.insert("insert", "Error: Not Connected to a server!" + "\n")
+            self.responses.append("insert", "Error: Not Connected to a server!" + "\n")
 
     def send(self, msg:str, address:tuple):
         bytesToSend = str.encode(json.dumps(str(msg)))
         self.UDPClientSocket.sendto(bytesToSend, (str(address[0]), int(address[1])))
 
-    def recieve(self):
-        return self.UDPClientSocket.recvfrom(self.bufferSize)
+##############################
+def listen():
+    while True:
+        # Attempt to listen. Sometimes an error occurs even if already connected. 
+        try:
+            bytesAddressPair = recieve()
+            # Convert recieved inputs
+            byteMsg = bytesAddressPair[0]
+            ServerMsgDict = ast.literal_eval(json.loads(byteMsg.decode()))
+            
+            client.textbox.insert("insert", ServerMsgDict["message"] + "\n") 
+            
+            if not client.connected:
+                client.textbox.insert("insert", "[Client]: Disconnected from Server..." + "\n") 
+                resetConnection()
+        except:
+            client.textbox.insert("insert", "Recieve Error: Connection to the Message Board Server has failed! Please check IP Address and Port Number." + "\n") 
+            resetConnection()
+
+def recieve():
+    return client.UDPClientSocket.recvfrom(client.bufferSize)
+
+def resetConnection():
+    client.serverAddressPort = None
+    client.connected = False
+
+#################
 
 customtkinter.set_appearance_mode("dark")
 customtkinter.set_default_color_theme("dark-blue")
 client = Client()
-client.mainloop()
+clientThread = threading.Thread(target=client.mainloop)
+clientThread.start()
+
+listen()
+
